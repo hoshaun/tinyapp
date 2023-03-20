@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/hoshaun/tinyapp/issues"
   },
-  "homepage": "https://github.com/hoshaun/tinyapp#readme"
+  "homepage": "https://github.com/hoshaun/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
 }
