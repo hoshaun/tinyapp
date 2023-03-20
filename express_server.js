@@ -56,7 +56,7 @@ const generateRandomString = function(length) {
   const charSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let randomStr = '';
   for (let i = 0; i < length; i++) {
-    randomIndex = Math.floor(Math.random() * charSet.length);
+    const randomIndex = Math.floor(Math.random() * charSet.length);
     randomStr += charSet[randomIndex];
   }
   return randomStr;
