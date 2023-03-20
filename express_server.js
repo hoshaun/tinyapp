@@ -36,9 +36,16 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+app.get("/u/:id", (req, res) => {
+  const longURL = urlDatabase[req.params.id];
+  res.redirect(longURL);
+});
+
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  const longURL = req.body.longURL;
+  const shortURL = generateRandomString(6);
+  urlDatabase[shortURL] = longURL;
+  res.redirect(`/urls/${shortURL}`);
 });
 
 app.listen(PORT, () => {
@@ -47,7 +54,7 @@ app.listen(PORT, () => {
 
 const generateRandomString = function(length) {
   const charSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const randomStr = '';
+  let randomStr = '';
   for (let i = 0; i < length; i++) {
     randomIndex = Math.floor(Math.random() * charSet.length);
     randomStr += charSet[randomIndex];
