@@ -7,39 +7,52 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+const users = {};
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
-app.get("/", (req, res) => {
-  res.send("Hello!");
+app.get("/register", (req, res) => {
+  const user = users[req.cookies['user_id']];
+  const templateVars = {
+    user: user
+  };
+  res.render('register', templateVars);
 });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
+app.get("/login", (req, res) => {
+  const user = users[req.cookies['user_id']];
+  const templateVars = {
+    user: user
+  };
+  res.render('login', templateVars);
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { 
-    urls: urlDatabase, 
-    username: req.cookies["username"]
+  const user = users[req.cookies['user_id']];
+  const templateVars = {
+    urls: urlDatabase,
+    user: user
   };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const user = users[req.cookies['user_id']];
+  const templateVars = {
+    user: user
+  };
+  res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { 
-    id: req.params.id, 
-    longURL: urlDatabase[req.params.id] 
+  const user = users[req.cookies['user_id']];
+  const templateVars = {
+    id: req.params.id,
+    longURL: urlDatabase[req.params.id],
+    user: user
   };
   res.render("urls_show", templateVars);
 });
@@ -56,14 +69,42 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
+app.post("/register", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  if (!(email && password) || getUserByEmail(email)) {
+    return res.status(400).send('Status: Bad Request');
+  }
+
+  const newUserId = generateRandomString(10);
+  const newUser = {
+    id: newUserId,
+    email: email,
+    password: password
+  };
+  users[newUserId] = newUser;
+
+  res.cookie('user_id', newUserId);
+  res.redirect('/urls');
+});
+
 app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username);
+  const email = req.body.email;
+  const password = req.body.password;
+  const user = getUserByEmail(email);
+
+  if (!(getUserByEmail(email) && user.password === password)) {
+    return res.status(403).send('Status: Incorrect Email or Password');
+  }
+
+  res.cookie('user_id', user.id);
   res.redirect('/urls');
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('username');
-  res.redirect('/urls');
+  res.clearCookie('user_id');
+  res.redirect('/login');
 });
 
 app.post("/urls/:id", (req, res) => {
@@ -88,4 +129,13 @@ const generateRandomString = function(length) {
     randomStr += charSet[randomIndex];
   }
   return randomStr;
+};
+
+const getUserByEmail = function(email) {
+  for (const id in users) {
+    if (users[id].email === email) {
+      return users[id];
+    }
+  }
+  return null;
 };
