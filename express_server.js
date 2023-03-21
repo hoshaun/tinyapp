@@ -10,62 +10,115 @@ app.use(cookieParser());
 const users = {};
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
 
 app.get("/register", (req, res) => {
   const user = users[req.cookies['user_id']];
+
+  if (user) {
+    res.redirect('/urls');
+  }
+
   const templateVars = {
     user: user
   };
+
   res.render('register', templateVars);
 });
 
 app.get("/login", (req, res) => {
   const user = users[req.cookies['user_id']];
+
+  if (user) {
+    res.redirect('/urls');
+  }
+
   const templateVars = {
     user: user
   };
+
   res.render('login', templateVars);
 });
 
 app.get("/urls", (req, res) => {
   const user = users[req.cookies['user_id']];
+  const urls = user ? urlsForUser(user.id) : {};
+
   const templateVars = {
-    urls: urlDatabase,
+    urls: urls,
     user: user
   };
+
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
   const user = users[req.cookies['user_id']];
+
+  if (!user) {
+    res.redirect('/login');
+  }
+
   const templateVars = {
     user: user
   };
+
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
   const user = users[req.cookies['user_id']];
+
+  if (!user) {
+    return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
+  }
+
+  if (urlDatabase[req.params.id].userID !== user.id) {
+    return res.status(401).send('Action unauthorized. You do not have access to this resource.\n');
+  }
+
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     user: user
   };
+
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
+  const longURL = urlDatabase[req.params.id].longURL;
+
+  if (!longURL) {
+    return res.status(404).send('Resource not found.\n');
+  }
+
   res.redirect(longURL);
 });
 
 app.post("/urls", (req, res) => {
+  const user = users[req.cookies['user_id']];
+
+  if (!user) {
+    return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
+  }
+
   const longURL = req.body.longURL;
   const shortURL = generateRandomString(6);
-  urlDatabase[shortURL] = longURL;
+
+  urlDatabase[shortURL] = {
+    longURL: longURL,
+    userID: user.id,
+  };
+
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -74,7 +127,7 @@ app.post("/register", (req, res) => {
   const password = req.body.password;
 
   if (!(email && password) || getUserByEmail(email)) {
-    return res.status(400).send('Status: Bad Request');
+    return res.status(400).send('Status: Bad Request\n');
   }
 
   const newUserId = generateRandomString(10);
@@ -95,7 +148,7 @@ app.post("/login", (req, res) => {
   const user = getUserByEmail(email);
 
   if (!(getUserByEmail(email) && user.password === password)) {
-    return res.status(403).send('Status: Incorrect Email or Password');
+    return res.status(403).send('Status: Incorrect Email or Password\n');
   }
 
   res.cookie('user_id', user.id);
@@ -108,11 +161,41 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id] = req.body.longURL;
+  const user = users[req.cookies['user_id']];
+  const url = urlDatabase[req.params.id];
+
+  if (!url) {
+    return res.status(404).send('Resource not found.\n');
+  }
+
+  if (!user) {
+    return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
+  }
+
+  if (url.userID !== user.id) {
+    return res.status(401).send('Action unauthorized. You do not have access to this resource.\n');
+  }
+
+  url.longURL = req.body.longURL;
   res.redirect('/urls');
 });
 
 app.post("/urls/:id/delete", (req, res) => {
+  const user = users[req.cookies['user_id']];
+  const url = urlDatabase[req.params.id];
+
+  if (!url) {
+    return res.status(404).send('Resource not found.\n');
+  }
+
+  if (!user) {
+    return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
+  }
+
+  if (url.userID !== user.id) {
+    return res.status(401).send('Action unauthorized. You do not have access to this resource.\n');
+  }
+
   delete urlDatabase[req.params.id];
   res.redirect('/urls');
 });
@@ -138,4 +221,14 @@ const getUserByEmail = function(email) {
     }
   }
   return null;
+};
+
+const urlsForUser = function(id) {
+  const urls = {};
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      urls[url] = urlDatabase[url];
+    }
+  }
+  return urls;
 };
