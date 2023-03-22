@@ -1,12 +1,18 @@
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 8080;
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
 
 const users = {};
 
@@ -22,10 +28,10 @@ const urlDatabase = {
 };
 
 app.get("/register", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
 
   if (user) {
-    res.redirect('/urls');
+    return res.redirect('/urls');
   }
 
   const templateVars = {
@@ -36,10 +42,10 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
 
   if (user) {
-    res.redirect('/urls');
+    return res.redirect('/urls');
   }
 
   const templateVars = {
@@ -50,8 +56,7 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  console.log(users);
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
   const urls = user ? urlsForUser(user.id) : {};
 
   const templateVars = {
@@ -63,10 +68,10 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
 
   if (!user) {
-    res.redirect('/login');
+    return res.redirect('/login');
   }
 
   const templateVars = {
@@ -77,7 +82,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
 
   if (!user) {
     return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
@@ -107,7 +112,7 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
 
   if (!user) {
     return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
@@ -140,7 +145,7 @@ app.post("/register", (req, res) => {
   };
   users[newUserId] = newUser;
 
-  res.cookie('user_id', newUserId);
+  req.session.userId = newUserId;
   res.redirect('/urls');
 });
 
@@ -153,17 +158,17 @@ app.post("/login", (req, res) => {
     return res.status(403).send('Status: Incorrect Email or Password\n');
   }
 
-  res.cookie('user_id', user.id);
+  req.session.userId = user.id;
   res.redirect('/urls');
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect('/login');
 });
 
 app.post("/urls/:id", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
   const url = urlDatabase[req.params.id];
 
   if (!url) {
@@ -183,7 +188,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  const user = users[req.cookies['user_id']];
+  const user = users[req.session.userId];
   const url = urlDatabase[req.params.id];
 
   if (!url) {
