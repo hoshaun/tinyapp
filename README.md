@@ -4,8 +4,8 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["Sample1"](./sample1.png)
-!["Sample2"](./sample2.png)
+!["Sample1"](./sample1.png "Sample 1")
+!["Sample2"](./sample2.png "Sample 2")
 
 ## Dependencies
 
