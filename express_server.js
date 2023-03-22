@@ -1,6 +1,7 @@
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
+const { generateRandomString, getUserByEmail, urlsForUser } = require('./helpers');
 const app = express();
 const PORT = 8080;
 
@@ -14,21 +15,12 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
-const users = {};
+const userDatabase = {};
 
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW",
-  },
-};
+const urlDatabase = {};
 
 app.get("/register", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
 
   if (user) {
     return res.redirect('/urls');
@@ -42,7 +34,7 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
 
   if (user) {
     return res.redirect('/urls');
@@ -56,8 +48,8 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const user = users[req.session.userId];
-  const urls = user ? urlsForUser(user.id) : {};
+  const user = userDatabase[req.session.userId];
+  const urls = user ? urlsForUser(user.id, urlDatabase) : {};
 
   const templateVars = {
     urls: urls,
@@ -68,7 +60,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
 
   if (!user) {
     return res.redirect('/login');
@@ -82,7 +74,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
 
   if (!user) {
     return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
@@ -112,7 +104,7 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
 
   if (!user) {
     return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
@@ -133,7 +125,7 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = bcrypt.hashSync(req.body.password, 10);
 
-  if (!(email && password) || getUserByEmail(email)) {
+  if (!(email && password) || getUserByEmail(email, userDatabase)) {
     return res.status(400).send('Status: Bad Request\n');
   }
 
@@ -143,7 +135,7 @@ app.post("/register", (req, res) => {
     email: email,
     password: password
   };
-  users[newUserId] = newUser;
+  userDatabase[newUserId] = newUser;
 
   req.session.userId = newUserId;
   res.redirect('/urls');
@@ -152,7 +144,7 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, userDatabase);
 
   if (!(user && bcrypt.compareSync(password, user.password))) {
     return res.status(403).send('Status: Incorrect Email or Password\n');
@@ -168,7 +160,7 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/urls/:id", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
   const url = urlDatabase[req.params.id];
 
   if (!url) {
@@ -188,7 +180,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  const user = users[req.session.userId];
+  const user = userDatabase[req.session.userId];
   const url = urlDatabase[req.params.id];
 
   if (!url) {
@@ -210,32 +202,3 @@ app.post("/urls/:id/delete", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-
-const generateRandomString = function(length) {
-  const charSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomStr = '';
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * charSet.length);
-    randomStr += charSet[randomIndex];
-  }
-  return randomStr;
-};
-
-const getUserByEmail = function(email) {
-  for (const id in users) {
-    if (users[id].email === email) {
-      return users[id];
-    }
-  }
-  return null;
-};
-
-const urlsForUser = function(id) {
-  const urls = {};
-  for (const url in urlDatabase) {
-    if (urlDatabase[url].userID === id) {
-      urls[url] = urlDatabase[url];
-    }
-  }
-  return urls;
-};
