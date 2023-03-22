@@ -1,4 +1,5 @@
 const express = require("express");
+const methodOverride = require('method-override');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const { generateRandomString, getUserByEmail, urlsForUser } = require('./helpers');
@@ -7,6 +8,7 @@ const PORT = 8080;
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride('_method'));
 app.use(cookieSession({
   name: 'session',
   keys: ['key1'],
@@ -159,7 +161,7 @@ app.post("/logout", (req, res) => {
   res.redirect('/login');
 });
 
-app.post("/urls/:id", (req, res) => {
+app.put("/urls/:id", (req, res) => {
   const user = userDatabase[req.session.userId];
   const url = urlDatabase[req.params.id];
 
@@ -179,7 +181,7 @@ app.post("/urls/:id", (req, res) => {
   res.redirect('/urls');
 });
 
-app.post("/urls/:id/delete", (req, res) => {
+app.delete("/urls/:id", (req, res) => {
   const user = userDatabase[req.session.userId];
   const url = urlDatabase[req.params.id];
 
