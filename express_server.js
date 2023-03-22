@@ -1,5 +1,6 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 8080;
 
@@ -49,6 +50,7 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  console.log(users);
   const user = users[req.cookies['user_id']];
   const urls = user ? urlsForUser(user.id) : {};
 
@@ -124,7 +126,7 @@ app.post("/urls", (req, res) => {
 
 app.post("/register", (req, res) => {
   const email = req.body.email;
-  const password = req.body.password;
+  const password = bcrypt.hashSync(req.body.password, 10);
 
   if (!(email && password) || getUserByEmail(email)) {
     return res.status(400).send('Status: Bad Request\n');
@@ -147,7 +149,7 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
   const user = getUserByEmail(email);
 
-  if (!(getUserByEmail(email) && user.password === password)) {
+  if (!(user && bcrypt.compareSync(password, user.password))) {
     return res.status(403).send('Status: Incorrect Email or Password\n');
   }
 
