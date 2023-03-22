@@ -77,32 +77,48 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:id", (req, res) => {
   const user = userDatabase[req.session.userId];
+  const url = urlDatabase[req.params.id];
 
   if (!user) {
     return res.status(401).send('Action unauthorized. Must be logged in to continue.\n');
   }
 
-  if (urlDatabase[req.params.id].userID !== user.id) {
+  if (url.userID !== user.id) {
     return res.status(401).send('Action unauthorized. You do not have access to this resource.\n');
   }
 
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id].longURL,
-    user: user
+    longURL: url.longURL,
+    user: user,
+    totalVisits: url.totalVisits,
+    visitors: url.visitors,
   };
 
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id].longURL;
+  const url = urlDatabase[req.params.id];
 
-  if (!longURL) {
+  if (!url) {
     return res.status(404).send('Resource not found.\n');
   }
 
-  res.redirect(longURL);
+  const ip = req.ip;
+  const timestamp = (new Date()).toString();
+  const visitor = {
+    id: generateRandomString(10),
+    ip: ip,
+    timestamps: []
+  };
+
+  url.totalVisits = url.totalVisits ? url.totalVisits + 1 : 1;
+  url.visitors = url.visitors ? url.visitors : {};
+  url.visitors[ip] = url.visitors[ip] ? url.visitors[ip] : visitor;
+  url.visitors[ip].timestamps.push(timestamp);
+  
+  res.redirect(url.longURL);
 });
 
 app.post("/urls", (req, res) => {

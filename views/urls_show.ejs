@@ -20,6 +20,32 @@
         <p class="card-text">
           Short URL ID: <a href="/u/<%= id %>"><%= id %></a>
         </p>
+        <p class="card-text">
+          Total Visits: <%= totalVisits ? totalVisits : 0 %>
+          <p>Unique Visitors: <%= visitors ? Object.keys(visitors).length : 0 %></p>
+          <% if (visitors) { %>
+            <table style="margin-left:auto; margin-right:auto;">
+              <thead>
+                <tr style="border:1px solid black; text-align: center;">
+                  <th colspan="2">Visitors</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% for (const key in visitors) { %>
+                  <tr style="border:1px solid black;">
+                    <td style="border:1px solid black;">Visitor ID: <%= visitors[key].id %></td>
+                    <td style="border:1px solid black;">Visitor IP: <%= visitors[key].ip %><br>
+                      Times visited:<br>
+                        <% for (const timestamp of visitors[key].timestamps) { %>
+                          <%= timestamp %><br>
+                        <% } %>
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          <% } %>
+        </p>
       </div>
       <div class="card-footer text-muted">
         <h5 class="card-title">Edit</h5>
